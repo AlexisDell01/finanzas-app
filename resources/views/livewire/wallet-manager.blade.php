@@ -98,6 +98,7 @@
     <x-delete-modal 
     title="Eliminar Cuenta" 
     message="¿Seguro que deseas eliminar esta cuenta? Los movimientos asociados seguirán existiendo, pero no estarán vinculados a esta cuenta." 
-    :itemId="itemToDelete" 
+    wire="$wire" 
     />
+    
 </div>

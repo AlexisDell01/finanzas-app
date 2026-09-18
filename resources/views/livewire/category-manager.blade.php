@@ -55,6 +55,6 @@
     <x-delete-modal 
     title="Eliminar Categoría" 
     message="¿Seguro que deseas eliminar esta categoría? Desaparecerá de tu lista para futuros registros." 
-    :itemId="itemToDelete" 
+    wire="$wire" 
     />
 </div>
