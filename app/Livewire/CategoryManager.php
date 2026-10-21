@@ -38,7 +38,12 @@ class CategoryManager extends Component
 
     public function render()
     {
-        $categories = Category::where('user_id', auth()->id())->latest()->get();
+        $categories = Category::where(function ($query) {
+            $query->whereNull('user_id')
+                ->orWhere('user_id', auth()->id());
+        })
+        ->latest()
+        ->get();
         
         return view('livewire.category-manager', [
             'categories' => $categories

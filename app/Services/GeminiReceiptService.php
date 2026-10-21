@@ -8,14 +8,13 @@ class GeminiReceiptService
 {
     public function analyzeReceipt($imagePath, $categories)
     {
-       
-
         $apiKey = env('GEMINI_API_KEY');
+        // Asegúrate de usar una versión válida del modelo (1.5-flash es la actual estable para esto)
         $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={$apiKey}";
+        
         $imageData = base64_encode(file_get_contents($imagePath));
         $mimeType = mime_content_type($imagePath);
 
-        
         $categoryList = $categories->pluck('name', 'id')->toJson();
 
         $prompt = "Actúa como un asistente financiero experto. Analiza el siguiente recibo o ticket de compra.
@@ -28,7 +27,8 @@ class GeminiReceiptService
             \"category_id\": (elige el ID que mejor encaje de esta lista de categorías del usuario: {$categoryList})
         }";
 
-        $response = Http::post($url, [
+        // AÑADIMOS ->timeout(120) AQUÍ 👇
+        $response = Http::timeout(120)->post($url, [
             'contents' => [
                 [
                     'parts' => [

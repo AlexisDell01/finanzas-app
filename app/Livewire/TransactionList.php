@@ -54,10 +54,9 @@ class TransactionList extends Component
                 }
             }
 
-            // 3. Borramos el movimiento de la base de datos
             $transaction->delete();
+            
 
-            // 4. Avisamos a todo el Dashboard que recalcule
             $this->dispatch('transaction-saved');
         }
     }

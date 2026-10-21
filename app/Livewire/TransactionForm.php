@@ -28,30 +28,35 @@ class TransactionForm extends Component
     {
         $this->date = now()->format('Y-m-d');
     }
-    public function analyzeWithAI(GeminiReceiptService $aiService)
-    {
-         set_time_limit(120);
-        $this->validate([
-            'receipt' => 'image|max:5120', // Máximo 5MB
-        ]);
+   public function analyzeWithAI(GeminiReceiptService $aiService)
+{
+    set_time_limit(120);
+    $this->validate([
+        'receipt' => 'image|max:5120', // Máximo 5MB
+    ]);
 
-        // Obtenemos las categorías de gasto del usuario
-        $categories = Category::where('user_id', auth()->id())->where('type', 'expense')->get();
+    // Modificamos aquí: Traemos los gastos globales Y los gastos del usuario
+    $categories = Category::where('type', 'expense')
+        ->where(function ($query) {
+            $query->whereNull('user_id')
+                  ->orWhere('user_id', auth()->id());
+        })
+        ->get();
 
-        try {
-            // Llamamos al servicio pasando la ruta temporal del archivo subido
-            $data = $aiService->analyzeReceipt($this->receipt->getRealPath(), $categories);
+    try {
+        // Llamamos al servicio pasando la ruta temporal del archivo subido
+        $data = $aiService->analyzeReceipt($this->receipt->getRealPath(), $categories);
 
-            // ¡La magia sucede aquí! Autocompletamos los campos del formulario
-            $this->amount = $data['amount'] ?? $this->amount;
-            $this->date = $data['date'] ?? $this->date;
-            $this->description = $data['description'] ?? $this->description;
-            $this->category_id = $data['category_id'] ?? $this->category_id;
-            
-        } catch (\Exception $e) {
-            $this->addError('receipt', 'No se pudo leer el ticket: ' . $e->getMessage());
-        }
+        // ¡La magia sucede aquí! Autocompletamos los campos del formulario
+        $this->amount = $data['amount'] ?? $this->amount;
+        $this->date = $data['date'] ?? $this->date;
+        $this->description = $data['description'] ?? $this->description;
+        $this->category_id = $data['category_id'] ?? $this->category_id;
+        
+    } catch (\Exception $e) {
+        $this->addError('receipt', 'No se pudo leer el ticket: ' . $e->getMessage());
     }
+}
 
     public function save()
     {
@@ -107,10 +112,13 @@ class TransactionForm extends Component
 
     public function render()
     {
-        // Cargamos las categorías y billeteras del usuario actual para los selects
-        $categories = Category::where('user_id', auth()->id())
-                             ->where('type', $this->type) // Filtramos por ingreso/gasto
-                             ->get();
+        $categories = Category::where('type', $this->type) // Filtramos por ingreso/gasto
+                    ->where(function ($query) {
+                        $query->whereNull('user_id')
+                            ->orWhere('user_id', auth()->id());
+                    })
+                    ->orderBy('name') // Opcional: para que salgan ordenadas alfabéticamente
+                    ->get();
                              
         $wallets = Wallet::where('user_id', auth()->id())->get();
 
