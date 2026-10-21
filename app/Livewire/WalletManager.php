@@ -2,15 +2,18 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
 use App\Models\Wallet;
-use Livewire\Attributes\On; // 🌟 1. Importamos el escuchador de eventos
+use Livewire\Attributes\On;
+use Livewire\Component;
 
 class WalletManager extends Component
 {
     public $name;
+
     public $balance;
+
     public $type = 'standard';
+
     public $credit_limit;
 
     public function save()
@@ -19,7 +22,7 @@ class WalletManager extends Component
             'name' => 'required|string|max:255',
             'type' => 'required|in:standard,credit',
             'credit_limit' => 'nullable|required_if:type,credit|numeric|min:0',
-            'balance' => 'nullable|numeric', 
+            'balance' => 'nullable|numeric',
         ]);
 
         Wallet::create([
@@ -42,9 +45,9 @@ class WalletManager extends Component
     public function render()
     {
         $wallets = Wallet::where('user_id', auth()->id())->latest()->get();
-        
+
         return view('livewire.wallet-manager', [
-            'wallets' => $wallets
+            'wallets' => $wallets,
         ]);
     }
 }

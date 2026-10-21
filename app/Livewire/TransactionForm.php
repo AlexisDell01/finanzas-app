@@ -2,61 +2,67 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
-use Livewire\WithFileUploads; 
-use App\Models\Transaction;
 use App\Models\Category;
+use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Services\GeminiReceiptService;
-
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class TransactionForm extends Component
 {
-    use WithFileUploads; 
+    use WithFileUploads;
 
-    public $type = 'expense'; 
+    public $type = 'expense';
+
     public $amount;
+
     public $description;
+
     public $date;
+
     public $category_id;
+
     public $wallet_id;
 
-    public $receipt; 
-    public $to_wallet_id; 
+    public $receipt;
+
+    public $to_wallet_id;
 
     public function mount()
     {
         $this->date = now()->format('Y-m-d');
     }
-   public function analyzeWithAI(GeminiReceiptService $aiService)
-{
-    set_time_limit(120);
-    $this->validate([
-        'receipt' => 'image|max:5120', // Máximo 5MB
-    ]);
 
-    // Modificamos aquí: Traemos los gastos globales Y los gastos del usuario
-    $categories = Category::where('type', 'expense')
-        ->where(function ($query) {
-            $query->whereNull('user_id')
-                  ->orWhere('user_id', auth()->id());
-        })
-        ->get();
+    public function analyzeWithAI(GeminiReceiptService $aiService)
+    {
+        set_time_limit(120);
+        $this->validate([
+            'receipt' => 'image|max:5120', // Máximo 5MB
+        ]);
 
-    try {
-        // Llamamos al servicio pasando la ruta temporal del archivo subido
-        $data = $aiService->analyzeReceipt($this->receipt->getRealPath(), $categories);
+        // Modificamos aquí: Traemos los gastos globales Y los gastos del usuario
+        $categories = Category::where('type', 'expense')
+            ->where(function ($query) {
+                $query->whereNull('user_id')
+                    ->orWhere('user_id', auth()->id());
+            })
+            ->get();
 
-        // ¡La magia sucede aquí! Autocompletamos los campos del formulario
-        $this->amount = $data['amount'] ?? $this->amount;
-        $this->date = $data['date'] ?? $this->date;
-        $this->description = $data['description'] ?? $this->description;
-        $this->category_id = $data['category_id'] ?? $this->category_id;
-        
-    } catch (\Exception $e) {
-        $this->addError('receipt', 'No se pudo leer el ticket: ' . $e->getMessage());
+        try {
+            // Llamamos al servicio pasando la ruta temporal del archivo subido
+            $data = $aiService->analyzeReceipt($this->receipt->getRealPath(), $categories);
+
+            // ¡La magia sucede aquí! Autocompletamos los campos del formulario
+            $this->amount = $data['amount'] ?? $this->amount;
+            $this->date = $data['date'] ?? $this->date;
+            $this->description = $data['description'] ?? $this->description;
+            $this->category_id = $data['category_id'] ?? $this->category_id;
+
+        } catch (\Exception $e) {
+            $this->addError('receipt', 'No se pudo leer el ticket: '.$e->getMessage());
+        }
     }
-}
 
     public function save()
     {
@@ -75,7 +81,7 @@ class TransactionForm extends Component
 
         $receiptPath = null;
         if ($this->receipt) {
-            $receiptPath = $this->receipt->store('tickets/' . auth()->id(), 'supabase');
+            $receiptPath = $this->receipt->store('tickets/'.auth()->id(), 'supabase');
         }
 
         Transaction::create([
@@ -91,35 +97,35 @@ class TransactionForm extends Component
         ]);
 
         // 🌟 LA MAGIA DE LOS SALDOS 🌟
-        $origen = \App\Models\Wallet::find($this->wallet_id);
-        
+        $origen = Wallet::find($this->wallet_id);
+
         if ($this->type === 'expense') {
             $origen->decrement('balance', $this->amount);
         } elseif ($this->type === 'income') {
             $origen->increment('balance', $this->amount);
         } elseif ($this->type === 'transfer') {
-            $destino = \App\Models\Wallet::find($this->to_wallet_id);
+            $destino = Wallet::find($this->to_wallet_id);
             $origen->decrement('balance', $this->amount); // Sale dinero del origen
             $destino->increment('balance', $this->amount); // Entra a la tarjeta de crédito (paga la deuda)
         }
 
         $this->reset(['amount', 'description', 'category_id', 'to_wallet_id', 'receipt']);
-        
+
         // Avisamos a las demás tarjetas que se actualicen
-        $this->dispatch('transaction-saved'); 
+        $this->dispatch('transaction-saved');
         session()->flash('message', 'Movimiento registrado con éxito.');
     }
 
     public function render()
     {
         $categories = Category::where('type', $this->type) // Filtramos por ingreso/gasto
-                    ->where(function ($query) {
-                        $query->whereNull('user_id')
-                            ->orWhere('user_id', auth()->id());
-                    })
-                    ->orderBy('name') // Opcional: para que salgan ordenadas alfabéticamente
-                    ->get();
-                             
+            ->where(function ($query) {
+                $query->whereNull('user_id')
+                    ->orWhere('user_id', auth()->id());
+            })
+            ->orderBy('name') // Opcional: para que salgan ordenadas alfabéticamente
+            ->get();
+
         $wallets = Wallet::where('user_id', auth()->id())->get();
 
         return view('livewire.transaction-form', [

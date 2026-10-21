@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-
 Route::view('/', 'welcome')->name('home');
 
 Route::middleware([
@@ -10,7 +9,7 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    
+
     // Tu dashboard principal (Solo estadísticas)
     Route::get('/dashboard', function () {
         return view('dashboard');
